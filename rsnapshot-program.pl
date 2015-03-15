@@ -50,6 +50,9 @@ use IO::File;			# recursive open in parse_config_file
 ###           CPAN MODULES           ###
 ########################################
 
+# if we were loaded as a module (from a unit test, usually), succeed without running the toplevel code
+return 1 if caller;
+
 # keep track of whether we have access to the Lchown module
 my $have_lchown = 0;
 
