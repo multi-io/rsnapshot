@@ -22,17 +22,22 @@ sub print_err {
 
 my $test			= 0; # turn verbose on, but don't execute
                                      # any filesystem commands
-my %config_vars = ( lockfile => '/tmp/lockfiletest' );
+my %config_vars = ( lockfile => '/tmp/lockfiletest', wait_for_lock => 1 );
 
 my $stop_on_stale_lockfile = 0;
 
+print "$$: start\n";
+
 add_lockfile();
 
+print "$$: enter\n";
 sleep 3;
+print "$$: leave\n";
 
 remove_lockfile();
 
-   
+print "$$: done\n";
+
 # accepts no arguments
 # returns undef if lockfile isn't defined in the config file, and 1 upon success
 # also, it can make the program exit with 1 as the return value if it can't create the lockfile
@@ -44,6 +49,31 @@ remove_lockfile();
 # then see if that PID exists.  If it does, we stop, otherwise we assume it's
 # a stale lock and remove it first.
 sub add_lockfile {
+	my $wait_for_lock = $config_vars{'wait_for_lock'};
+
+	while (1) {
+		my $ret = try_add_lockfile();
+		return $ret unless ($ret == 2 || $ret == 3);
+		if ($wait_for_lock) {
+			#sleep 0.1;
+		} else {
+			if (2 == $ret) {
+				print_err ("Lockfile $config_vars{'lockfile'} exists and so does its process, can not continue");
+				syslog_err("Lockfile $config_vars{'lockfile'} exists and so does its process, can not continue");
+			} else {
+				print_err ("Could not write lockfile $config_vars{'lockfile'}: $!", 1);
+				syslog_err("Could not write lockfile $config_vars{'lockfile'}");
+			}
+			exit(1);
+		}
+	}
+}
+
+
+# implements all of add_lockfile() except for the wait_for_lock flag. If the lockfile
+# is blocked, return 2 or 3 (depending on the specific condition) so the caller (add_lockfile())
+# can react according to the wait_for_lock setting.
+sub try_add_lockfile {
 	# if we don't have a lockfile defined, just return undef
 	if (!defined($config_vars{'lockfile'})) {
 		return (undef);
@@ -69,9 +99,7 @@ sub add_lockfile {
             chomp($pid);
             close(LOCKFILE);
             if(kill(0, $pid)) {
-                print_err ("Lockfile $lockfile exists and so does its process, can not continue");
-                syslog_err("Lockfile $lockfile exists and so does its process, can not continue");
-                exit(1);
+                return 2;
             } else {
 		if(1 == $stop_on_stale_lockfile) {
 		    print_err ("Stale lockfile $lockfile detected. You need to remove it manually to continue", 1);
@@ -93,9 +121,7 @@ sub add_lockfile {
 		# sysopen() can do exclusive opens, whereas perl open() can not
 		my $result = sysopen(LOCKFILE, $lockfile, O_WRONLY | O_EXCL | O_CREAT, 0644);
 		if (!defined($result) || 0 == $result) {
-			print_err ("Could not write lockfile $lockfile: $!", 1);
-			syslog_err("Could not write lockfile $lockfile");
-			exit(1);
+			return 2;
 		}
 		
 		# print PID to lockfile
