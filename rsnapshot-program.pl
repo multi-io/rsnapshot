@@ -54,7 +54,7 @@ use IO::File;			# recursive open in parse_config_file
 return 1 if caller;
 
 # keep track of whether we have access to the Lchown module
-my $have_lchown = 0;
+our $have_lchown = 0;
 
 # use_lchown() is called later, so we can log the results
 
@@ -62,27 +62,29 @@ my $have_lchown = 0;
 ###     DECLARE GLOBAL VARIABLES     ###
 ########################################
 
+# define the global variables as 'our' rather than 'my' so we can set them from (poor man's) unit tests
+
 # turn off buffering
 $| = 1;
 
 # version of rsnapshot
-my $VERSION = '1.3.1';
+our $VERSION = '1.3.1';
 
 # command or interval to execute (first cmd line arg)
-my $cmd;
+our $cmd;
 
 # default configuration file
-my $config_file;
+our $config_file;
 
 # hash to hold variables from the configuration file
-my %config_vars;
+our %config_vars;
 
 # array of hash_refs containing the destination backup point
 # and either a source dir or a script to run
-my @backup_points;
+our @backup_points;
 
 # array of backup points to rollback, in the event of failure
-my @rollback_points;
+our @rollback_points;
 
 # "intervals" are user defined time periods (e.g., alpha, beta)
 # this array holds hash_refs containing the name of the interval,
@@ -91,15 +93,15 @@ my @rollback_points;
 # NB, intervals and now called backup levels, and the config parameter
 # is 'retain'
 
-my @intervals;
+our @intervals;
 
 # store interval data (mostly info about which one we're on, what was before, etc.)
 # this is a convenient reference to some of the data from and metadata about @intervals
-my $interval_data_ref;
+our $interval_data_ref;
 
 # intervals can't have these values, because they're either taken by other commands
 # or reserved for future use
-my @reserved_words = qw(
+our @reserved_words = qw(
 	archive
 	check-config-version
 	configtest
@@ -122,13 +124,13 @@ my @reserved_words = qw(
 # global flags that change the outcome of the program,
 # and are configurable by both cmd line and config flags
 #
-my $test			= 0; # turn verbose on, but don't execute
+our $test			= 0; # turn verbose on, but don't execute
                                      # any filesystem commands
-my $do_configtest		= 0; # parse config file and exit
-my $one_fs			= 0; # one file system (don't cross
+our $do_configtest		= 0; # parse config file and exit
+our $one_fs			= 0; # one file system (don't cross
                                      # partitions within a backup point)
-my $link_dest			= 0; # use the --link-dest option to rsync
-my $stop_on_stale_lockfile	= 0; # stop if there is a stale lockfile
+our $link_dest			= 0; # use the --link-dest option to rsync
+our $stop_on_stale_lockfile	= 0; # stop if there is a stale lockfile
 
 # how much noise should we make? the default is 2
 #
@@ -143,42 +145,42 @@ my $stop_on_stale_lockfile	= 0; # stop if there is a stale lockfile
 #	5	Debug
 #
 # define verbose and loglevel
-my $verbose		= undef;
-my $loglevel	= undef;
+our $verbose		= undef;
+our $loglevel	= undef;
 
 # set defaults for verbose and loglevel
-my $default_verbose		= 2;
-my $default_loglevel	= 3;
+our $default_verbose		= 2;
+our $default_loglevel	= 3;
 
 # assume the config file is valid until we find an error
-my $config_perfect = 1;
+our $config_perfect = 1;
 
 # exit code for rsnapshot
-my $exit_code = 0;
+our $exit_code = 0;
 
 # global defaults for external programs
-my $default_rsync_short_args	= '-a';
-my $default_rsync_long_args		= '--delete --numeric-ids --relative --delete-excluded';
-my $default_ssh_args			= undef;
-my $default_du_args				= '-csh';
+our $default_rsync_short_args	= '-a';
+our $default_rsync_long_args		= '--delete --numeric-ids --relative --delete-excluded';
+our $default_ssh_args			= undef;
+our $default_du_args				= '-csh';
 
 # set default for use_lazy_deletes
-my $use_lazy_deletes = 0;	# do not delete the oldest archive until after backup
+our $use_lazy_deletes = 0;	# do not delete the oldest archive until after backup
 
 # set default for number of tries
-my $rsync_numtries = 1; # by default, try once
+our $rsync_numtries = 1; # by default, try once
 
 # exactly how the program was called, with all arguments
 # this is set before getopts() modifies @ARGV
-my $run_string = "$0 " . join(' ', @ARGV);
+our $run_string = "$0 " . join(' ', @ARGV);
 
 # if we have any errors, we print the run string once, at the top of the list
-my $have_printed_run_string = 0;
+our $have_printed_run_string = 0;
 	
 # pre-buffer the include/exclude parameter flags
 # local to parse_config_file and validate_config_file
-my $rsync_include_args		= undef;
-my $rsync_include_file_args	= undef;
+our $rsync_include_args		= undef;
+our $rsync_include_file_args	= undef;
 
 ########################################
 ###         SIGNAL HANDLERS          ###
